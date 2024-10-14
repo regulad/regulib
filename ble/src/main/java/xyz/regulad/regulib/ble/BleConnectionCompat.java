@@ -18,7 +18,7 @@ import java.lang.reflect.Method;
 import static android.bluetooth.BluetoothDevice.TRANSPORT_LE;
 
 // shamelessly lifted from https://github.com/dariuszseweryn/RxAndroidBle/blob/7663a1ab96605dc26eba378a9e51747ad254b229/rxandroidble/src/main/java/com/polidea/rxandroidble2/internal/util/BleConnectionCompat.java
-@SuppressLint({"PrivateApi", "DiscouragedPrivateApi", "MissingPermission", "Deprecated"})
+@SuppressLint({"PrivateApi", "DiscouragedPrivateApi", "MissingPermission"})
 public class BleConnectionCompat {
     private static final String TAG = "BleConnectionCompat";
 
@@ -34,7 +34,7 @@ public class BleConnectionCompat {
             return null;
         }
 
-        /**
+        /*
          * Issue that caused a race condition mentioned below was fixed in 7.0.0_r1
          * https://android.googlesource.com/platform/frameworks/base/+/android-7.0.0_r1/core/java/android/bluetooth/BluetoothGatt.java#649
          * compared to
@@ -45,7 +45,7 @@ public class BleConnectionCompat {
             return connectGattCompat(bluetoothGattCallback, remoteDevice, autoConnect);
         }
 
-        /**
+        /*
          * Some implementations of Bluetooth Stack have a race condition where autoConnect flag
          * is not properly set before calling connectGatt. That's the reason for using reflection
          * to set the flag manually.
@@ -130,6 +130,7 @@ public class BleConnectionCompat {
         return getBluetoothGattMethod.invoke(iBluetoothManager);
     }
 
+    @SuppressWarnings("deprecation")
     private Object getIBluetoothManager() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
 
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
