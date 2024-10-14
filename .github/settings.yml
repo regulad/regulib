@@ -1,0 +1,12 @@
+repository:
+  name: regulib
+  description: "📚 Library for common Android utilities"
+  topics:
+    - android
+    - android-library
+    - gradle
+    - maven
+    - maven-central
+    - kotlin
+    - library
+    - utilities
