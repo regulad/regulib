@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.os.Build
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -33,9 +34,7 @@ import kotlin.reflect.KClass
 class FlowCache @PublishedApi internal constructor(context: Context) :
     SQLiteOpenHelper(context, File(context.cacheDir, DATABASE_NAME).absolutePath, null, DATABASE_VERSION) {
     companion object {
-        @PublishedApi
-        // i would like for this to be infinite, but java forces my hand
-        internal const val MAP_SIZE = 1_000
+        // no need to declare a custom initial size of a hashmap: it will grow as needed efficiently
 
         const val DATABASE_NAME = "regulib_flow_cache.db"
         private const val DATABASE_VERSION = 1
@@ -50,17 +49,20 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
         internal const val COLUMN_DATA = "data"
 
         @PublishedApi
-        internal val flowCaches: MutableMap<Context, FlowCache> = Collections.synchronizedMap(WeakHashMap(MAP_SIZE))
+        internal val flowCaches: MutableMap<Context, FlowCache> = Collections.synchronizedMap(WeakHashMap())
 
         /**
          * Caches the flow in the context, persisting between application restarts.
          *
-         * @param context the context to cache the flow in
-         * @param cacheKey the key to cache the flow under;
-         *  make sure that this key is unique for each flow! if the key binds to flows of two different types,
-         *  a serialization error will occur
+         * @param context the context to cache the flow in, typically an activity context. Data will be stored in the context's app's cache directory.
+         * @param cacheKey The key of the cache. Make sure that this value is unique for each flow you cache. If the value is not unique for two flows of the same type, both flows will share the same cache, and it is undefined behavior which underlying flow will be collected. For two flows of two different types, an `IllegalArgumentException` will be thrown. The default value is `"${Build.BOARD}+${T::class.java.name}"`, which should be fine for most uses including apps that sync data between devices provided that the class is only used in a flow once and the class is not anonymous. In these cases, define a custom cache key.
+         * @return a cached version of the flow, which is "hot" yet has infinite replay meaning that all items will be replayed to any new collectors
+         * @throws IllegalArgumentException if the flow is not of the correct type
          */
-        inline fun <reified T : @Serializable Any> Flow<T>.asCached(context: Context, cacheKey: String): Flow<T> =
+        inline fun <reified T : @Serializable Any> Flow<T>.asCached(
+            context: Context,
+            cacheKey: String = "${Build.BOARD}+${T::class.java.name}"
+        ): Flow<T> =
             flowCaches.versionAgnosticComputeIfAbsent(context) { FlowCache(context) }.cacheFlow(this, cacheKey)
     }
 
@@ -71,14 +73,15 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
     internal val dbLock = ReentrantReadWriteLock()
 
     @PublishedApi
-    internal val flowCache = ConcurrentHashMap<String, Flow<*>>(MAP_SIZE)
+    internal val flowCache = ConcurrentHashMap<String, Flow<*>>()
 
     @PublishedApi
-    internal val flowTypeMap: MutableMap<Flow<*>, KClass<*>> = Collections.synchronizedMap(WeakHashMap(MAP_SIZE))
+    // this should never be used with the default key since we include the reified type in the key, but if the user provides a custom key, we need to ensure that the flow is of the correct type to avoid undefined behavior
+    internal val flowTypeMap: MutableMap<Flow<*>, KClass<*>> = Collections.synchronizedMap(WeakHashMap())
 
     @PublishedApi
-    internal inline fun <reified T : @Serializable Any> cacheFlow(flow: Flow<T>, cacheId: String): Flow<T> {
-        val map = flowCache.versionAgnosticComputeIfAbsent(cacheId) {
+    internal inline fun <reified T : @Serializable Any> cacheFlow(flow: Flow<T>, cacheKey: String): Flow<T> {
+        val map = flowCache.versionAgnosticComputeIfAbsent(cacheKey) {
             // we can't use a hot flow because hot flows don't have the ability to "finish" a stream
             // thus, we must implement a custom solution that sends in all the values from the flow once they are
 
@@ -88,7 +91,7 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
             val streamCompletedFlow = MutableStateFlow(false) // beware: no replay of this state
 
             collectionCoroutineScope.launch {
-                val cachedItems = readListOfId<T>(cacheId)
+                val cachedItems = readListOfId<T>(cacheKey)
 
                 if (cachedItems != null) {
                     cachedItems.forEach { newItemFlow.emit(it) }
@@ -104,7 +107,7 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
                     streamCompletedFlow.value = true
 
                     // store in db
-                    writeListOfId(cacheId, itemsReceived)
+                    writeListOfId(cacheKey, itemsReceived)
                 }
             }
 
@@ -143,7 +146,7 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
 
         // before returning, verify that the flow is the correct type
         if (flowTypeMap[map] != T::class) {
-            throw IllegalArgumentException("The flow with cacheId $cacheId is not of type ${T::class}")
+            throw IllegalArgumentException("The flow with key $cacheKey is not of type ${T::class}")
         }
 
         @Suppress("UNCHECKED_CAST") // we just manually verified that the flow is of the correct type

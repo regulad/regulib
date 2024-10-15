@@ -1,0 +1,29 @@
+name: "Gradle Tasks"
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  schedule:
+    # ensures that workflow runs AT LEAST every 60 days to keep artifacts downloadable
+    - cron: "0 3 15 */2 *"
+  workflow_dispatch:
+
+jobs:
+  gradle:
+    # - setup java
+    # - setup gradle cache
+    # - setup android sdk
+    # - ci: gradle "check" task
+    # - ci: assembleDebug and upload artifacts to github
+    # - doc: upload javadoc to github pages
+
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: TODO
+        run: echo "TODO"
+
+

@@ -15,6 +15,8 @@ It provides commonly-reused utilities, including:
 * Version-agnostic support for Java 1.8 Collection & Map features under Kotlin
 * And more!
 
+For more info, check out the JavaDoc at https://regulad.github.io/regulib/
+
 ## Installation
 
 ReguLib is available on Maven Central.
