@@ -78,10 +78,6 @@ android {
         consumerProguardFiles("consumer-rules.pro")
     }
 
-    testFixtures {
-        enable = true
-    }
-
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
     }

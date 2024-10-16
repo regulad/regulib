@@ -79,10 +79,6 @@ android {
         consumerProguardFiles("consumer-rules.pro")
     }
 
-    testFixtures {
-        enable = true
-    }
-
     buildFeatures {
         compose = true
     }
