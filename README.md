@@ -37,3 +37,5 @@ dependencies {
 
 You may run into version conflicts if you use other libraries that depend on different versions of Kotlin or other
 libraries. Check the `gradle/libs.versions.toml` for the versions of dependencies ReguLib relies on.
+
+Due to the size of the libraries, it is highly recommended to set up ProGuard rules to remove unused code.
