@@ -15,7 +15,11 @@ It provides commonly-reused utilities, including:
 * Version-agnostic support for Java 1.8 Collection & Map features under Kotlin
 * And more!
 
-For more info, check out the JavaDoc at https://regulad.github.io/regulib/
+For more info, check out the JavaDoc at one of the links below:
+
+* https://regulad.github.io/regulib/common
+* https://regulad.github.io/regulib/ble
+* https://regulad.github.io/regulib/compose
 
 ## Installation
 
