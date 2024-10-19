@@ -51,16 +51,16 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: "gradle-artifacts"
-          path: "artifact"
+          path: "./artifact"
       - name: "isolate javadocs"
         run: |
           mkdir -p /tmp/javadoc
           mkdir -p /tmp/javadoc/common
           mkdir -p /tmp/javadoc/compose
           mkdir -p /tmp/javadoc/ble
-          unzip -o artifact/**/compose/build/intermediates/java_doc_jar/release/release-javadoc.jar -d /tmp/javadoc/compose
-          unzip -o artifact/**/ble/build/intermediates/java_doc_jar/release/release-javadoc.jar -d /tmp/javadoc/ble
-          unzip -o artifact/**/common/build/intermediates/java_doc_jar/release/release-javadoc.jar -d /tmp/javadoc/common
+          unzip -o ./artifact/compose/build/intermediates/java_doc_jar/release/release-javadoc.jar -d /tmp/javadoc/compose
+          unzip -o ./artifact/ble/build/intermediates/java_doc_jar/release/release-javadoc.jar -d /tmp/javadoc/ble
+          unzip -o ./artifact/common/build/intermediates/java_doc_jar/release/release-javadoc.jar -d /tmp/javadoc/common
       - name: "deploy javadocs"
         uses: actions/upload-pages-artifact@v3
         with:
