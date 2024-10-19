@@ -41,6 +41,7 @@ jobs:
   javadoc:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: "ubuntu-latest"
+    needs: build
     steps:
       # - download the javadoc artifact
       # - extract the javadoc artifact to /tmp
