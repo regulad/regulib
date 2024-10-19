@@ -13,14 +13,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  gradle:
+  build:
     # - setup java
     # - setup gradle cache
     # - setup android sdk
-    # - ci: gradle "check" task
-    # - ci: assembleDebug and upload artifacts to github
-    # - doc: upload javadoc to github pages
-
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/checkout@v4
@@ -30,11 +26,41 @@ jobs:
           java-version: '21'
           cache: 'gradle'
           # we don't need to declare any additional cache paths, the cache already catches everything
-      - run: "./gradlew build --no-daemon"
+      - uses: android-actions/setup-android@v3
+      - run: "chmod +x ./gradlew"  # this project is used from windows, so it can be messed up
+      - run: "./gradlew build javaDocReleaseJar releaseSourcesJar --no-daemon"
       - uses: actions/upload-artifact@v4
         with:
+          name: "gradle-artifacts"
           path: |
             **/build/outputs/**/*.aar
             **/build/outputs/**/*.apk
             **/build/outputs/**/*.jar
-          name: "artifacts"
+            **/build/libs/**/*.jar
+            **/build/intermediates/java_doc_jar/release/release-javadoc.jar
+  javadoc:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: "ubuntu-latest"
+    steps:
+      # - download the javadoc artifact
+      # - extract the javadoc artifact to /tmp
+      # - setup folders like common/, compose/, ble/, for modules in javadocs
+      # - copy the javadoc files to the correct folders
+      # - use actions/deploy-pages to deploy the javadoc to gh-pages
+      - uses: actions/download-artifact@v4
+        with:
+          name: "gradle-artifacts"
+          path: "artifact"
+      - name: "isolate javadocs"
+        run: |
+          mkdir -p /tmp/javadoc
+          mkdir -p /tmp/javadoc/common
+          mkdir -p /tmp/javadoc/compose
+          mkdir -p /tmp/javadoc/ble
+          unzip -o artifact/**/compose/build/intermediates/java_doc_jar/release/release-javadoc.jar -d /tmp/javadoc/compose
+          unzip -o artifact/**/ble/build/intermediates/java_doc_jar/release/release-javadoc.jar -d /tmp/javadoc/ble
+          unzip -o artifact/**/common/build/intermediates/java_doc_jar/release/release-javadoc.jar -d /tmp/javadoc/common
+      - name: "deploy javadocs"
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "/tmp/javadoc"
