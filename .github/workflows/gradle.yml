@@ -72,3 +72,4 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: "/tmp/javadoc"
+      - uses: actions/deploy-pages@v4
