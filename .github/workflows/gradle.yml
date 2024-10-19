@@ -23,7 +23,18 @@ jobs:
 
     runs-on: "ubuntu-latest"
     steps:
-      - name: TODO
-        run: echo "TODO"
-
-
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+          # we don't need to declare any additional cache paths, the cache already catches everything
+      - run: "./gradlew build --no-daemon"
+      - uses: actions/upload-artifact@v4
+        with:
+          path: |
+            **/build/outputs/**/*.aar
+            **/build/outputs/**/*.apk
+            **/build/outputs/**/*.jar
+          name: "artifacts"
