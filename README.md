@@ -39,3 +39,25 @@ You may run into version conflicts if you use other libraries that depend on dif
 libraries. Check the `gradle/libs.versions.toml` for the versions of dependencies ReguLib relies on.
 
 Due to the size of the libraries, it is highly recommended to set up ProGuard rules to remove unused code.
+
+## Publishing
+
+To publish a new version of ReguLib, you need to have the following environment variables set:
+
+* `OSSRH_USERNAME`: Your Sonatype username
+* `OSSRH_PASSWORD`: Your Sonatype password
+
+In addition, you also have to have Gradle signing set up. You can do this by creating a `gradle.properties` file in your
+home directory with the following contents:
+
+```properties
+signing.keyId=YOUR_KEY_ID
+signing.password=YOUR_KEY_PASSWORD
+signing.secretKeyRingFile=/path/to/your/.gnupg/secring.gpg
+```
+
+Then, you can run the following command to publish:
+
+```shell
+./gradlew publish closeAndReleaseStagingRepositories
+```
