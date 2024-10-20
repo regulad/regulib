@@ -1,5 +1,6 @@
 package xyz.regulad.regulib.compose
 
+import android.annotation.SuppressLint
 import androidx.compose.runtime.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.first
  * @returns a pair of the state of the collected items and a state of whether the flow has finished. Hot flows will never finish, but the list will be updated as new items are emitted.
  */
 @Composable
+@SuppressLint("ProduceStateDoesNotAssignValue")
 fun <T> Flow<T>.produceState(vararg keys: Any?): Pair<List<T>, Boolean> {
     var flowFinished by remember(*keys) { mutableStateOf(false) }
 
@@ -33,6 +35,7 @@ fun <T> Flow<T>.produceState(vararg keys: Any?): Pair<List<T>, Boolean> {
  * @returns the first item that matches the predicate, and null otherwise
  */
 @Composable
+@SuppressLint("ProduceStateDoesNotAssignValue")
 fun <T> Flow<T>.firstState(vararg keys: Any?, predicate: (T) -> Boolean): T? {
     val firstItem by produceState<T?>(null, *keys) {
         value = first(predicate)
