@@ -75,7 +75,7 @@ android {
             minCompileSdk = 34
         }
 
-        testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -102,10 +102,15 @@ android {
 }
 
 dependencies {
-    implementation(libs.appcompat.v7)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
     testImplementation(libs.junit)
-    androidTestImplementation(libs.runner)
-    androidTestImplementation(libs.espresso.core)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
+
+    testImplementation(libs.jetbrains.kotlinx.coroutines.test)
+    androidTestImplementation(libs.jetbrains.kotlinx.coroutines.test)
+    implementation(libs.androidx.annotation.jvm)
 }

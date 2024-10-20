@@ -6,6 +6,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Build
+import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -35,8 +36,9 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
     SQLiteOpenHelper(context, File(context.cacheDir, DATABASE_NAME).absolutePath, null, DATABASE_VERSION) {
     companion object {
         // no need to declare a custom initial size of a hashmap: it will grow as needed efficiently
+        const val TAG = "FlowCache"
 
-        const val DATABASE_NAME = "regulib_flow_cache.db"
+        internal const val DATABASE_NAME = "regulib_flow_cache.db"
         private const val DATABASE_VERSION = 1
 
         @PublishedApi // we use these annotations since the asCached is inlined for the reified type, this effectively makes the internal accessible from the inline but maintains clarity that they should not be used
@@ -62,8 +64,12 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
         inline fun <reified T : @Serializable Any> Flow<T>.asCached(
             context: Context,
             cacheKey: String = "${Build.BOARD}+${T::class.java.name}"
-        ): Flow<T> =
-            flowCaches.versionAgnosticComputeIfAbsent(context) { FlowCache(context) }.cacheFlow(this, cacheKey)
+        ): Flow<T> {
+            val flowCache = synchronized(this@Companion) {
+                flowCaches.versionAgnosticComputeIfAbsent(context) { FlowCache(context) }
+            }
+            return flowCache.cacheFlow(this, cacheKey)
+        }
     }
 
     @PublishedApi
@@ -91,7 +97,12 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
             val streamCompletedFlow = MutableStateFlow(false) // beware: no replay of this state
 
             collectionCoroutineScope.launch {
-                val cachedItems = readListOfId<T>(cacheKey)
+                val cachedItems = try {
+                    readListOfId<T>(cacheKey)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to read cached items for key $cacheKey, reproducing cache", e)
+                    null
+                }
 
                 if (cachedItems != null) {
                     cachedItems.forEach { newItemFlow.emit(it) }
@@ -107,7 +118,11 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
                     streamCompletedFlow.value = true
 
                     // store in db
-                    writeListOfId(cacheKey, itemsReceived)
+                    try {
+                        writeListOfId(cacheKey, itemsReceived)
+                    } catch (e: Exception) {
+                        Log.w("FlowCache", "Failed to write cached items for key $cacheKey", e)
+                    }
                 }
             }
 
@@ -154,40 +169,50 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
     }
 
     @PublishedApi
-    internal inline fun <reified T : @Serializable Any> readListOfId(id: String): List<T>? = dbLock.read {
-        readableDatabase.use { db ->
-            db.query(
-                TABLE_NAME,
-                arrayOf(COLUMN_DATA),
-                "$COLUMN_ID = ?",
-                arrayOf(id),
-                null,
-                null,
-                null
-            ).use { cursor ->
-                if (cursor.moveToFirst()) {
-                    @SuppressLint("Range") // we know that the data is in the column
-                    val data = cursor.getString(cursor.getColumnIndex(COLUMN_DATA))
-                    return Json.decodeFromString(data)
-                } else {
-                    return null
+    internal suspend inline fun <reified T : @Serializable Any> readListOfId(id: String): List<T>? {
+        // we don't need to wait for the DB to open, it will open when lazily needed
+        return withContext(Dispatchers.IO) {
+            dbLock.read {
+                readableDatabase.use { db ->
+                    db.query(
+                        TABLE_NAME,
+                        arrayOf(COLUMN_DATA),
+                        "$COLUMN_ID = ?",
+                        arrayOf(id),
+                        null,
+                        null,
+                        null
+                    ).use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            @SuppressLint("Range") // we know that the data is in the column
+                            val data = cursor.getString(cursor.getColumnIndex(COLUMN_DATA))
+                            return@read Json.decodeFromString(data)
+                        } else {
+                            return@read null
+                        }
+                    }
                 }
             }
         }
     }
 
     @PublishedApi
-    internal inline fun <reified T : @Serializable Any> writeListOfId(id: String, data: List<T>) = dbLock.write {
-        writableDatabase.use { db ->
-            db.insertWithOnConflict(
-                TABLE_NAME,
-                null,
-                ContentValues().apply {
-                    put(COLUMN_ID, id)
-                    put(COLUMN_DATA, Json.encodeToString(data))
-                },
-                SQLiteDatabase.CONFLICT_REPLACE
-            )
+    internal suspend inline fun <reified T : @Serializable Any> writeListOfId(id: String, data: List<T>) {
+        // we don't need to wait for the DB to open, it will open when lazily needed
+        return withContext(Dispatchers.IO) {
+            dbLock.write {
+                writableDatabase.use { db ->
+                    db.insertWithOnConflict(
+                        TABLE_NAME,
+                        null,
+                        ContentValues().apply {
+                            put(COLUMN_ID, id)
+                            put(COLUMN_DATA, Json.encodeToString(data))
+                        },
+                        SQLiteDatabase.CONFLICT_REPLACE
+                    )
+                }
+            }
         }
     }
 

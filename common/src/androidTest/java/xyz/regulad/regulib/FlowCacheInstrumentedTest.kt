@@ -1,21 +1,21 @@
 package xyz.regulad.regulib
 
-import android.support.test.InstrumentationRegistry
-import android.support.test.runner.AndroidJUnit4
 import android.util.Log
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.Serializable
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import xyz.regulad.regulib.FlowCache.Companion.DATABASE_NAME
 import xyz.regulad.regulib.FlowCache.Companion.asCached
+import xyz.regulad.regulib.FlowCache.Companion.flowCaches
 
 @Serializable
 data class TestData(val value: Int)
@@ -28,19 +28,15 @@ class FlowCacheInstrumentedTest {
 
     private val appContext = InstrumentationRegistry.getInstrumentation().targetContext
 
-    @Before
-    fun setup() {
-        // Any setup code if needed
-    }
-
     @After
     fun tearDown() {
         // Clean up the database after each test
+        flowCaches.clear()
         appContext.deleteDatabase(DATABASE_NAME)
     }
 
     @Test
-    fun testFlowCaching() = runBlocking {
+    fun testFlowCaching() = runTest {
         val testFlow: Flow<TestData> = flow {
             Log.d("FlowCacheInstrumentedTest", "Emitting test data! This should only happen once.")
             emit(TestData(1))
@@ -73,11 +69,11 @@ class FlowCacheInstrumentedTest {
         assertEquals(result1, result4)
         Log.d("FlowCacheInstrumentedTest", "result4: $result4")
 
-        return@runBlocking // assure the test completes with a void value
+        return@runTest // assure the test completes with a void value
     }
 
     @Test
-    fun testFlowCachingWithoutKeys() = runBlocking {
+    fun testFlowCachingWithoutKeys() = runTest {
         val testFlow: Flow<AnotherTestData> = flow {
             Log.d("FlowCacheInstrumentedTest", "Emitting test data! This should only happen once.")
             emit(AnotherTestData(1))
@@ -110,6 +106,6 @@ class FlowCacheInstrumentedTest {
         assertEquals(result1, result4)
         Log.d("FlowCacheInstrumentedTest", "result4: $result4")
 
-        return@runBlocking // assure the test completes with a void value
+        return@runTest // assure the test completes with a void value
     }
 }

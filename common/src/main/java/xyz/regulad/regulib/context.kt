@@ -8,18 +8,77 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.support.annotation.StringRes
 import android.widget.Toast
+import androidx.annotation.StringRes
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
+/**
+ * Builds an [AlertDialog] using the given [builder] function.
+ *
+ * The [builder] function is an extension function on [AlertDialog.Builder].
+ *
+ * Example:
+ * ```
+ * val dialog = buildDialog {
+ *    setTitle("Title")
+ *    setMessage("Message")
+ *    setPositiveButton("OK") { _, _ -> showToast("OK clicked") }
+ *    setNegativeButton("Cancel") { _, _ -> showToast("Cancel clicked") }
+ *    setNeutralButton("Ignore") { _, _ -> showToast("Ignore clicked") }
+ * }
+ * ```
+ */
 fun Context.buildDialog(builder: AlertDialog.Builder.() -> Unit): AlertDialog {
     val dialogBuilder = AlertDialog.Builder(this)
     dialogBuilder.builder()
     return dialogBuilder.create()
 }
 
+/**
+ * Shows an [AlertDialog] using the given [builder] function.
+ *
+ * The [builder] function is an extension function on [AlertDialog.Builder].
+ *
+ * Example:
+ * ```
+ * showDialog {
+ *    setTitle("Title")
+ *    setMessage("Message")
+ *    setPositiveButton("OK") { _, _ -> showToast("OK clicked") }
+ *    setNegativeButton("Cancel") { _, _ -> showToast("Cancel clicked") }
+ *    setNeutralButton("Ignore") { _, _ -> showToast("Ignore clicked") }
+ * }
+ * ```
+ */
 fun Context.showDialog(builder: AlertDialog.Builder.() -> Unit) {
     Handler(Looper.getMainLooper()).post {
         buildDialog(builder).show()
+    }
+}
+
+/**
+ * Shows an [AlertDialog] using the given [builder] function.
+ *
+ * The [builder] function is an extension function on [AlertDialog.Builder].
+ *
+ * Example:
+ * ```
+ * showDialogSuspend {
+ *    setTitle("Title")
+ *    setMessage("Message")
+ *    setPositiveButton("OK") { _, _ -> showToast("OK clicked") }
+ *    setNegativeButton("Cancel") { _, _ -> showToast("Cancel clicked") }
+ *    setNeutralButton("Ignore") { _, _ -> showToast("Ignore clicked") }
+ * }
+ * ```
+ */
+suspend fun Context.showDialogSuspend(builder: AlertDialog.Builder.() -> Unit) {
+    suspendCoroutine { continuation ->
+        Handler(Looper.getMainLooper()).post {
+            buildDialog(builder).show()
+            continuation.resume(Unit)
+        }
     }
 }
 
