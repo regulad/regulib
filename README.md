@@ -13,6 +13,7 @@ It provides commonly-reused utilities, including:
 * Subnet scanning
 * Flow transformation utilities
 * Composable Flow utilities
+* A plethora of Jetpack Compose functions
 * QR generation components
 * Version-agnostic support for Java 1.8 Collection & Map features under Kotlin
 * And more!

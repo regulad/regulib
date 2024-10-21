@@ -12,6 +12,7 @@
             <option value="$PROJECT_DIR$/ble" />
             <option value="$PROJECT_DIR$/common" />
             <option value="$PROJECT_DIR$/compose" />
+            <option value="$PROJECT_DIR$/wifi" />
           </set>
         </option>
       </GradleProjectSettings>
