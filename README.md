@@ -9,7 +9,9 @@ ReguLib is an Android library used by my Android projects.
 It provides commonly-reused utilities, including:
 
 * Kotlin cold Flow caching
-* Reliable worry-free BLE connections
+* Reliable worry-free Bluetooth LE & WiFi Direct connections
+* Subnet scanning
+* Flow transformation utilities
 * Composable Flow utilities
 * QR generation components
 * Version-agnostic support for Java 1.8 Collection & Map features under Kotlin
@@ -19,6 +21,7 @@ For more info, check out the JavaDoc at one of the links below:
 
 * https://regulad.github.io/regulib/common
 * https://regulad.github.io/regulib/ble
+* https://regulad.github.io/regulib/wifi
 * https://regulad.github.io/regulib/compose
 
 ## Installation
@@ -31,6 +34,7 @@ Get the version from the badge above, and add the following to your `build.gradl
 dependencies {
     implementation("xyz.regulad:regulib-common:$version")
     implementation("xyz.regulad:regulib-ble:$version")
+    implementation("xyz.regulad:regulib-wifi:$version")
     implementation("xyz.regulad:regulib-compose:$version")
 }
 ```

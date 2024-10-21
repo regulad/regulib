@@ -54,21 +54,21 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
         internal val flowCaches: MutableMap<Context, FlowCache> = Collections.synchronizedMap(WeakHashMap())
 
         /**
-         * Caches the flow in the context, persisting between application restarts.
+         * Caches a flow relative to a context, only calling the backing flow once and replaying all items to any new collectors. If a non-null `cacheKey` is provided, the flow will be persisted between application restarts.
          *
          * @param context the context to cache the flow in, typically an activity context. Data will be stored in the context's app's cache directory.
-         * @param cacheKey The key of the cache. Make sure that this value is unique for each flow you cache. If the value is not unique for two flows of the same type, both flows will share the same cache, and it is undefined behavior which underlying flow will be collected. For two flows of two different types, an `IllegalArgumentException` will be thrown. The default value is `"${Build.BOARD}+${T::class.java.name}"`, which should be fine for most uses including apps that sync data between devices provided that the class is only used in a flow once and the class is not anonymous. In these cases, define a custom cache key.
+         * @param cacheKey The key of the cache. Make sure that this value is unique for each flow you cache. If the value is not unique for two flows of the same type, both flows will share the same cache, and it is undefined behavior which underlying flow will be collected. For two flows of two different types, an `IllegalArgumentException` will be thrown. The default value is `"${Build.BOARD}+${T::class.java.name}"`, which should be fine for most uses including apps that sync data between devices provided that the class is only used in a flow once and the class is not anonymous. In these cases, define a custom cache key. If null, then the cache will only be made "hot" in memory and will not be persisted.
          * @return a cached version of the flow, which is "hot" yet has infinite replay meaning that all items will be replayed to any new collectors
          * @throws IllegalArgumentException if the flow is not of the correct type
          */
         inline fun <reified T : @Serializable Any> Flow<T>.asCached(
             context: Context,
-            cacheKey: String = "${Build.BOARD}+${T::class.java.name}"
+            cacheKey: String? = "${Build.BOARD}+${T::class.java.name}"
         ): Flow<T> {
             val flowCache = synchronized(this@Companion) {
                 flowCaches.versionAgnosticComputeIfAbsent(context) { FlowCache(context) }
             }
-            return flowCache.cacheFlow(this, cacheKey)
+            return flowCache.cachedFlowOf(this, cacheKey)
         }
     }
 
@@ -86,86 +86,113 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
     internal val flowTypeMap: MutableMap<Flow<*>, KClass<*>> = Collections.synchronizedMap(WeakHashMap())
 
     @PublishedApi
-    internal inline fun <reified T : @Serializable Any> cacheFlow(flow: Flow<T>, cacheKey: String): Flow<T> {
-        val map = flowCache.versionAgnosticComputeIfAbsent(cacheKey) {
-            // we can't use a hot flow because hot flows don't have the ability to "finish" a stream
-            // thus, we must implement a custom solution that sends in all the values from the flow once they are
+    internal inline fun <reified T : @Serializable Any> cachedFlowOf(flow: Flow<T>, cacheKey: String?): Flow<T> {
+        if (cacheKey != null) {
+            val map = flowCache.versionAgnosticComputeIfAbsent(cacheKey) {
+                // we can't use a hot flow because hot flows don't have the ability to "finish" a stream
+                // thus, we must implement a custom solution that sends in all the values from the flow once they are
 
-            val collectionLock = Mutex() // enforces linear collection of items
-            val itemsReceived = mutableListOf<T>()
-            val newItemFlow = MutableSharedFlow<T>(Int.MAX_VALUE)
-            val streamCompletedFlow = MutableStateFlow(false) // beware: no replay of this state
+                val newProxyFlow = calculateCachedFlow(cacheKey, flow)
+                flowTypeMap[newProxyFlow] = T::class
 
-            collectionCoroutineScope.launch {
-                val cachedItems = try {
+                return@versionAgnosticComputeIfAbsent newProxyFlow
+            }
+
+            // before returning, verify that the flow is the correct type
+            if (flowTypeMap[map] != T::class) {
+                throw IllegalArgumentException("The flow with key $cacheKey is not of type ${T::class}")
+            }
+
+            @Suppress("UNCHECKED_CAST") // we just manually verified that the flow is of the correct type
+            return map as Flow<T>
+        } else {
+            return calculateCachedFlow(cacheKey, flow)
+        }
+    }
+
+    @PublishedApi
+    internal inline fun <reified T : @Serializable Any> calculateCachedFlow(
+        cacheKey: String?,
+        flow: Flow<T>
+    ): Flow<T> {
+        val collectionLock = Mutex() // enforces linear collection of items
+        val itemsReceived = mutableListOf<T>()
+        val newItemFlow = MutableSharedFlow<T>(0)
+        val streamCompletedFlow = MutableStateFlow(false) // beware: no replay of this state
+
+        collectionCoroutineScope.launch {
+            val cachedItems = try {
+                if (cacheKey != null) {
                     readListOfId<T>(cacheKey)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to read cached items for key $cacheKey, reproducing cache", e)
+                } else {
                     null
                 }
-
-                if (cachedItems != null) {
-                    cachedItems.forEach { newItemFlow.emit(it) }
-                    itemsReceived.addAll(cachedItems)
-                    streamCompletedFlow.value = true
-                } else {
-                    flow.collect {
-                        collectionLock.withLock {
-                            itemsReceived.add(it)
-                            newItemFlow.emit(it)
-                        }
-                    }
-                    streamCompletedFlow.value = true
-
-                    // store in db
-                    try {
-                        writeListOfId(cacheKey, itemsReceived)
-                    } catch (e: Exception) {
-                        Log.w("FlowCache", "Failed to write cached items for key $cacheKey", e)
-                    }
-                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to read cached items for key $cacheKey, reproducing cache", e)
+                null
             }
 
-            // we use a channel flow instead of flow since we launch a coroutine that adds items to the flow
-            val newProxyFlow = channelFlow {
-                if (streamCompletedFlow.value) {
-                    itemsReceived.forEach { channel.send(it) }
-                    return@channelFlow
-                } else {
-                    val alreadyEmittedItems = mutableListOf<T>()
-
-                    // tricky problem: if we cancel this job when the streamCompleted is true, we may have missed some items
-                    val itemCollectionJob = collectionCoroutineScope.launch {
-                        newItemFlow.collect {
-                            channel.send(it)
-                            alreadyEmittedItems.add(it)
-                        }
+            if (cachedItems != null) {
+                cachedItems.forEach { newItemFlow.emit(it) }
+                itemsReceived.addAll(cachedItems)
+                streamCompletedFlow.value = true
+            } else {
+                flow.collect {
+                    collectionLock.withLock {
+                        itemsReceived.add(it)
+                        newItemFlow.emit(it)
                     }
+                }
+                streamCompletedFlow.value = true
 
-                    streamCompletedFlow.waitForTrue()
-                    itemCollectionJob.cancelAndJoin() // everything in alreadyEmittedItems is guaranteed to be emitted, and itemsReceived is guaranteed to be complete
+                if (cacheKey == null) {
+                    // we don't want to save it
+                    return@launch
+                }
 
-                    // emit items we haven't emitted yet but have received, remembering that all items are received in order
-                    if (alreadyEmittedItems.size < itemsReceived.size) {
-                        itemsReceived.subList(alreadyEmittedItems.size, itemsReceived.size).forEach { channel.send(it) }
-                    }
-
-                    return@channelFlow
+                // store in db
+                try {
+                    writeListOfId(cacheKey, itemsReceived)
+                } catch (e: Exception) {
+                    Log.w("FlowCache", "Failed to write cached items for key $cacheKey", e)
                 }
             }
-
-            flowTypeMap[newProxyFlow] = T::class
-
-            newProxyFlow
         }
 
-        // before returning, verify that the flow is the correct type
-        if (flowTypeMap[map] != T::class) {
-            throw IllegalArgumentException("The flow with key $cacheKey is not of type ${T::class}")
+        // we use a channel flow instead of flow since we launch a coroutine that adds items to the flow
+        val newProxyFlow = channelFlow {
+            // although we could choose just to reply on the replay of the newItemFlow here,
+            // since we already have to collect the items in order to save them,
+            // we might as well just send them all and avoid registering as a collector earlier
+
+            // in addition, otherwise we could miss items if the streamCompletedFlow turns true while collecting but before we emit all items
+            if (streamCompletedFlow.value) {
+                itemsReceived.forEach { channel.send(it) }
+                return@channelFlow
+            } else {
+                val alreadyEmittedItems = mutableListOf<T>()
+
+                // tricky problem: if we cancel this job when the streamCompleted is true, we may have missed some items
+                val itemCollectionJob = collectionCoroutineScope.launch {
+                    newItemFlow.collect {
+                        channel.send(it)
+                        alreadyEmittedItems.add(it)
+                    }
+                }
+
+                streamCompletedFlow.waitForTrue()
+                itemCollectionJob.cancelAndJoin() // everything in alreadyEmittedItems is guaranteed to be emitted, and itemsReceived is guaranteed to be complete
+
+                // emit items we haven't emitted yet but have received, remembering that all items are received in order
+                if (alreadyEmittedItems.size < itemsReceived.size) {
+                    itemsReceived.subList(alreadyEmittedItems.size, itemsReceived.size).forEach { channel.send(it) }
+                }
+
+                return@channelFlow
+            }
         }
 
-        @Suppress("UNCHECKED_CAST") // we just manually verified that the flow is of the correct type
-        return map as Flow<T>
+        return newProxyFlow
     }
 
     @PublishedApi

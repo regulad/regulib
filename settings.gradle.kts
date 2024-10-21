@@ -24,3 +24,4 @@ rootProject.name = "regulib"
 include(":common")
 include(":ble")
 include(":compose")
+include(":wifi")

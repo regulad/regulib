@@ -64,10 +64,12 @@ jobs:
           mkdir -p /tmp/javadoc/common
           mkdir -p /tmp/javadoc/compose
           mkdir -p /tmp/javadoc/ble
+          mkdir -p /tmp/javadoc/wifi
           echo "<!DOCTYPE html><html><head><meta http-equiv='refresh' content='0;url=common/' /></head></html>" > /tmp/javadoc/index.html
           unzip -o ./artifact/compose/build/intermediates/java_doc_jar/release/release-javadoc.jar -d /tmp/javadoc/compose
           unzip -o ./artifact/ble/build/intermediates/java_doc_jar/release/release-javadoc.jar -d /tmp/javadoc/ble
           unzip -o ./artifact/common/build/intermediates/java_doc_jar/release/release-javadoc.jar -d /tmp/javadoc/common
+          unzip -o ./artifact/wifi/build/intermediates/java_doc_jar/release/release-javadoc.jar -d /tmp/javadoc/wifi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
