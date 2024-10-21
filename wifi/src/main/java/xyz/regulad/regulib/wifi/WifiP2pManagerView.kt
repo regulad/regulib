@@ -247,7 +247,7 @@ class WifiP2pManagerView private constructor(private val wifiP2pManager: WifiP2p
      *
      * This can only be called once.
      */
-    private fun teardown() {
+    fun teardown() {
         if (this::frameworkChannel.isInitialized && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             frameworkChannel.close()
         }
@@ -256,7 +256,14 @@ class WifiP2pManagerView private constructor(private val wifiP2pManager: WifiP2p
     }
 
     protected fun finalize() {
-        teardown()
+        if (managerInitializedState.value) {
+            Log.d(TAG, "WifiP2pManagerView was not torn down before being finalized. Tearing down now.")
+            try {
+                teardown()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to teardown WifiP2pManagerView", e)
+            }
+        }
     }
 
     // methods
