@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import org.jetbrains.annotations.ApiStatus.Experimental
 
@@ -22,35 +23,39 @@ import org.jetbrains.annotations.ApiStatus.Experimental
 @Composable
 fun ComposableWebView(
     url: String? = null,
+    modifier: Modifier = Modifier,
     networkIsAvailable: Boolean? = null,
     stateBundle: Bundle? = null,
 ) {
     var lastStateBundle by rememberSaveable { mutableStateOf(stateBundle) }
     var lastUrl by rememberSaveable { mutableStateOf<String?>(null) }
 
-    AndroidView(factory = {
-        WebView(it).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        }
-    }, update = { view ->
-        networkIsAvailable?.let { view.setNetworkAvailable(it) }
-
-        stateBundle?.let {
-            if (lastStateBundle != it) {
-                view.restoreState(it)
-                lastStateBundle = it
+    AndroidView(
+        modifier = modifier,
+        factory = {
+            WebView(it).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
             }
-        }
+        }, update = { view ->
+            networkIsAvailable?.let { view.setNetworkAvailable(it) }
 
-        if (url != lastUrl) {
-            view.loadUrl(url ?: "about:blank")
-            lastUrl = url
+            stateBundle?.let {
+                if (lastStateBundle != it) {
+                    view.restoreState(it)
+                    lastStateBundle = it
+                }
+            }
+
+            if (url != lastUrl) {
+                view.loadUrl(url ?: "about:blank")
+                lastUrl = url
+            }
+        }, onRelease = { view ->
+            stateBundle?.let { view.saveState(it) }
+            view.destroy()
         }
-    }, onRelease = { view ->
-        stateBundle?.let { view.saveState(it) }
-        view.destroy()
-    })
+    )
 }
