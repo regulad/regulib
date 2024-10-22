@@ -117,7 +117,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     implementation(libs.core)
-    implementation(libs.zxing.android.embedded)
 
     implementation(project(":common"))
 }
