@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "xyz.regulad"
-version = "1.4.2"
+version = "1.4.3"
 
 nexusPublishing {
     repositories {

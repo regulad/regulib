@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalContext
 
 enum class NavigationMode {
@@ -53,9 +54,8 @@ fun rememberNavigationMode(): State<NavigationMode> {
  * This is useful for [Scaffold]s that do not respect the system navigation bar visibility in terms of their padding.
  */
 @RequiresApi(Build.VERSION_CODES.M)
-@Composable
 @Suppress("unused")
-fun Modifier.navigationAwarePadding(paddingValues: PaddingValues): Modifier {
+fun Modifier.navigationAwarePadding(paddingValues: PaddingValues): Modifier = composed {
     val navigationMode by rememberNavigationMode()
     val systemBarsVisible by rememberContextIsImmersive()
 
@@ -65,7 +65,7 @@ fun Modifier.navigationAwarePadding(paddingValues: PaddingValues): Modifier {
         }
     }
 
-    return if (!shouldNotUsePadding) {
+    return@composed if (!shouldNotUsePadding) {
         this.padding(paddingValues)
     } else {
         this

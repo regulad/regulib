@@ -139,10 +139,10 @@ fun ImmersiveFullscreenContent() {
 @RequiresApi(Build.VERSION_CODES.M)
 @Composable
 fun rememberContextIsImmersive(): State<Boolean> {
-    val numberOfImmersiveComposables = immersiveFullscreenContentComposablesInComposition.collectAsState()
+    val numberOfImmersiveComposables by immersiveFullscreenContentComposablesInComposition.collectAsState()
     return remember {
         derivedStateOf {
-            numberOfImmersiveComposables.value > 0
+            numberOfImmersiveComposables > 0
         }
     }
 }
