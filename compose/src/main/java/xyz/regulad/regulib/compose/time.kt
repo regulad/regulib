@@ -21,11 +21,11 @@ import kotlin.time.TimeSource
  */
 @Composable
 @Suppress("unused")
-fun rememberDurationSinceComposition(accuracy: Duration = 100.milliseconds): State<Duration?> {
-    val initialTimeMark by rememberCompositionTimeMark()
-    val timeMarkState = remember { mutableStateOf<Duration?>(null) }
+fun rememberDurationSinceComposition(vararg keys: Any?, accuracy: Duration = 100.milliseconds): State<Duration?> {
+    val initialTimeMark by rememberCompositionTimeMark(*keys)
+    val timeMarkState = remember(*keys) { mutableStateOf<Duration?>(null) }
 
-    LaunchedEffect(accuracy, initialTimeMark) {
+    LaunchedEffect(*keys, accuracy, initialTimeMark) {
         while (isActive && initialTimeMark != null) {
             timeMarkState.value = TimeSource.Monotonic.markNow() - initialTimeMark!!
             delay(accuracy)
@@ -41,12 +41,11 @@ fun rememberDurationSinceComposition(accuracy: Duration = 100.milliseconds): Sta
  * Because of the frequency of updates, this composable should be used in composition with [derivedStateOf]
  */
 @Composable
-private fun rememberCompositionTimeMark(): State<TimeSource.Monotonic.ValueTimeMark?> {
-    val timeMarkState = remember { mutableStateOf<TimeSource.Monotonic.ValueTimeMark?>(null) }
-    val timeSource = remember { TimeSource.Monotonic }
+private fun rememberCompositionTimeMark(vararg keys: Any?): State<TimeSource.Monotonic.ValueTimeMark?> {
+    val timeMarkState = remember(*keys) { mutableStateOf<TimeSource.Monotonic.ValueTimeMark?>(null) }
 
-    LaunchedEffect(Unit) {
-        timeMarkState.value = timeSource.markNow()
+    LaunchedEffect(*keys) {
+        timeMarkState.value = TimeSource.Monotonic.markNow()
     }
 
     return timeMarkState
@@ -86,10 +85,10 @@ fun rememberCurrentInstant(accuracy: Duration = 100.milliseconds): State<Instant
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 @Suppress("unused")
-fun rememberCompositionInstant(): State<Instant?> {
-    val instantState = remember { mutableStateOf<Instant?>(null) }
+fun rememberCompositionInstant(vararg keys: Any?): State<Instant?> {
+    val instantState = remember(*keys) { mutableStateOf<Instant?>(null) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(*keys) {
         instantState.value = Instant.now()
     }
 
