@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
+@Suppress("Unused")
 fun ByteQRCode(
     bytes: ByteArray,
     size: Pair<Int, Int> = Pair(300, 300),

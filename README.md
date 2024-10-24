@@ -15,8 +15,10 @@ It provides commonly-reused utilities, including:
 * Composable Flow utilities
 * A plethora of Jetpack Compose functions
 * Jetpack Compose "remember" functions for system services, like sensors and time
+* Compose layout utils (grids, etc.)
 * QR generation components
-* Version-agnostic support for Java 1.8 Collection & Map features under Kotlin
+* Mjpeg streams, among other types of streams for Compose
+* Version-agnostic support for Java 1.8 Collection & Map features under Kotlin WITHOUT desugaring
 * And more!
 
 For more info, check out the JavaDoc at one of the links below:

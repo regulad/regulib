@@ -110,7 +110,7 @@ fun rememberSensorState(sensorType: Int): State<SensorEventView?> {
 
 @Preview
 @Composable
-fun SensorStatePreview() {
+private fun SensorStatePreview() {
     Column {
         val accelerometerState by rememberSensorState(Sensor.TYPE_ACCELEROMETER)
 

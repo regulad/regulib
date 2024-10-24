@@ -24,6 +24,7 @@ import kotlin.math.sqrt
  * This DynamicGridLayout, the [DynamicColumnRowGridLayout], creates columns containing rows. For certain use cases, like 9:16 video, [DynamicRowColumnGridLayout] may be more appropriate.
  */
 @Composable
+@Suppress("Unused")
 fun <T> DynamicColumnRowGridLayout(
     modifier: Modifier = Modifier,
     items: List<T>,
@@ -110,6 +111,7 @@ fun <T> DynamicColumnRowGridLayout(
  * This DynamicGridLayout, the [DynamicRowColumnGridLayout], creates rows containing columns. For certain use cases, like 16:9 video, [DynamicColumnRowGridLayout] may be more appropriate.
  */
 @Composable
+@Suppress("Unused")
 fun <T> DynamicRowColumnGridLayout(
     modifier: Modifier = Modifier,
     items: List<T>,

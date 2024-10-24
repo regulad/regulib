@@ -145,7 +145,7 @@ fun rememberContextIsImmersive(): State<Boolean> {
 @RequiresApi(Build.VERSION_CODES.M)
 @Preview
 @Composable
-fun ImmersiveFullscreenContentPreview() {
+private fun ImmersiveFullscreenContentPreview() {
     val durationSinceComposition by rememberDurationSinceComposition()
 
     if (durationSinceComposition == null) return
