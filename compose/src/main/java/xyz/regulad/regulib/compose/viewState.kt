@@ -46,9 +46,14 @@ fun WithBrightness(brightness: Float) {
     val activity = (context as? Activity) ?: return
 
     DisposableEffect(brightness) {
-        activity.window.attributes.screenBrightness = brightness
+        val attrs = activity.window.attributes
+        attrs.screenBrightness = brightness
+        activity.window.attributes = attrs
+
         onDispose {
-            activity.window.attributes.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+            val attrs2 = activity.window.attributes
+            attrs2.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+            activity.window.attributes = attrs2
         }
     }
 }
