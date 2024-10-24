@@ -35,6 +35,7 @@ import kotlin.coroutines.suspendCoroutine
  *
  * Example (in an async context):
  */
+@Suppress("unused")
 class WifiP2pManagerView private constructor(private val wifiP2pManager: WifiP2pManager, private val context: Context) {
     companion object {
         private const val TAG = "WifiP2pManagerView"

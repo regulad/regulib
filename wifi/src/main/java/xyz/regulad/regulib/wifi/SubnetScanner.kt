@@ -44,12 +44,16 @@ import kotlin.time.toJavaDuration
  * @see createTcpPortAssessor
  * @see createHttpPortAssessor
  */
+@Suppress("unused")
 class SubnetScanner(
     subnet: SubnetUtils.SubnetInfo,
     private val assessor: suspend (InetAddress) -> Boolean = ICMP_PING_ASSESSOR,
     threads: Int = 16
 ) {
     companion object {
+        fun fromCidr(cidr: String, assessor: suspend (InetAddress) -> Boolean = ICMP_PING_ASSESSOR, threads: Int = 16) =
+            SubnetScanner(SubnetUtils(cidr).info, assessor, threads)
+
         private const val TAG = "SubnetScanner"
 
         private val DEFAULT_TIMEOUT = 10_000L.toDuration(DurationUnit.MILLISECONDS)

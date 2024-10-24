@@ -77,8 +77,10 @@ android {
             withSourcesJar()
             withJavadocJar()
         }
+    }
 
-
+    testOptions {
+        targetSdk = 34
     }
 
     buildTypes {
