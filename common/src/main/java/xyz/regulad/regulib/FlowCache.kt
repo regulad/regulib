@@ -57,13 +57,13 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
          * Caches a flow relative to a context, only calling the backing flow once and replaying all items to any new collectors. If a non-null `cacheKey` is provided, the flow will be persisted between application restarts.
          *
          * @param context the context to cache the flow in, typically an activity context. Data will be stored in the context's app's cache directory.
-         * @param cacheKey The key of the cache. Make sure that this value is unique for each flow you cache. If the value is not unique for two flows of the same type, both flows will share the same cache, and it is undefined behavior which underlying flow will be collected. For two flows of two different types, an `IllegalArgumentException` will be thrown. The default value is `"${Build.BOARD}+${T::class.java.name}"`, which should be fine for most uses including apps that sync data between devices provided that the class is only used in a flow once and the class is not anonymous. In these cases, define a custom cache key. If null, then the cache will only be made "hot" in memory and will not be persisted.
+         * @param cacheKey The key of the cache. Make sure that this value is unique for each flow you cache. The system's board name is used by default.
          * @return a cached version of the flow, which is "hot" yet has infinite replay meaning that all items will be replayed to any new collectors
          * @throws IllegalArgumentException if the flow is not of the correct type
          */
         inline fun <reified T : @Serializable Any> Flow<T>.asCached(
             context: Context,
-            cacheKey: String? = "${Build.BOARD}+${T::class.java.name}"
+            cacheKey: String? = Build.BOARD
         ): Flow<T> {
             val flowCache = synchronized(this@Companion) {
                 flowCaches.versionAgnosticComputeIfAbsent(context) { FlowCache(context) }
@@ -79,28 +79,18 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
     internal val dbLock = ReentrantReadWriteLock()
 
     @PublishedApi
-    internal val flowCache = ConcurrentHashMap<String, Flow<*>>()
-
-    @PublishedApi
-    // this should never be used with the default key since we include the reified type in the key, but if the user provides a custom key, we need to ensure that the flow is of the correct type to avoid undefined behavior
-    internal val flowTypeMap: MutableMap<Flow<*>, KClass<*>> = Collections.synchronizedMap(WeakHashMap())
+    internal val flowCache = ConcurrentHashMap<Pair<KClass<*>, String>, Flow<*>>()
 
     @PublishedApi
     internal inline fun <reified T : @Serializable Any> cachedFlowOf(flow: Flow<T>, cacheKey: String?): Flow<T> {
         if (cacheKey != null) {
-            val map = flowCache.versionAgnosticComputeIfAbsent(cacheKey) {
+            val map = flowCache.versionAgnosticComputeIfAbsent(T::class to cacheKey) {
                 // we can't use a hot flow because hot flows don't have the ability to "finish" a stream
                 // thus, we must implement a custom solution that sends in all the values from the flow once they are
 
                 val newProxyFlow = calculateCachedFlow(cacheKey, flow)
-                flowTypeMap[newProxyFlow] = T::class
 
                 return@versionAgnosticComputeIfAbsent newProxyFlow
-            }
-
-            // before returning, verify that the flow is the correct type
-            if (flowTypeMap[map] != T::class) {
-                throw IllegalArgumentException("The flow with key $cacheKey is not of type ${T::class}")
             }
 
             @Suppress("UNCHECKED_CAST") // we just manually verified that the flow is of the correct type
@@ -110,6 +100,9 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
         }
     }
 
+    /**
+     * Creates a cached flow that is replayed to all collectors, and is persisted between application restarts if a cache key is provided.
+     */
     @PublishedApi
     internal inline fun <reified T : @Serializable Any> calculateCachedFlow(
         cacheKey: String?,
@@ -121,6 +114,9 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
         val streamCompletedFlow = MutableStateFlow(false) // beware: no replay of this state
 
         collectionCoroutineScope.launch {
+            Log.d(TAG, "Starting collection of flow for cache key $cacheKey")
+
+            Log.d(TAG, "Reading cached items for key $cacheKey")
             val cachedItems = try {
                 if (cacheKey != null) {
                     readListOfId<T>(cacheKey)
@@ -133,10 +129,12 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
             }
 
             if (cachedItems != null) {
+                Log.d(TAG, "Replaying cached items for key $cacheKey")
                 cachedItems.forEach { newItemFlow.emit(it) }
                 itemsReceived.addAll(cachedItems)
                 streamCompletedFlow.value = true
             } else {
+                Log.d(TAG, "No cached items found for key $cacheKey, collecting from flow")
                 flow.collect {
                     collectionLock.withLock {
                         itemsReceived.add(it)
@@ -152,9 +150,10 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
 
                 // store in db
                 try {
+                    Log.d(TAG, "Writing cached items for key $cacheKey")
                     writeListOfId(cacheKey, itemsReceived)
                 } catch (e: Exception) {
-                    Log.w("FlowCache", "Failed to write cached items for key $cacheKey", e)
+                    Log.w(TAG, "Failed to write cached items for key $cacheKey", e)
                 }
             }
         }
@@ -205,7 +204,7 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
                         TABLE_NAME,
                         arrayOf(COLUMN_DATA),
                         "$COLUMN_ID = ?",
-                        arrayOf(id),
+                        arrayOf("${T::class.java.name}::$id"),
                         null,
                         null,
                         null
@@ -233,7 +232,7 @@ class FlowCache @PublishedApi internal constructor(context: Context) :
                         TABLE_NAME,
                         null,
                         ContentValues().apply {
-                            put(COLUMN_ID, id)
+                            put(COLUMN_ID, "${T::class.java.name}::$id")
                             put(COLUMN_DATA, Json.encodeToString(data))
                         },
                         SQLiteDatabase.CONFLICT_REPLACE

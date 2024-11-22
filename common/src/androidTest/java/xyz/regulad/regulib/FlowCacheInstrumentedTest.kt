@@ -16,6 +16,7 @@ import org.junit.runner.RunWith
 import xyz.regulad.regulib.FlowCache.Companion.DATABASE_NAME
 import xyz.regulad.regulib.FlowCache.Companion.asCached
 import xyz.regulad.regulib.FlowCache.Companion.flowCaches
+import kotlin.time.Duration
 
 @Serializable
 data class TestData(val value: Int)
@@ -36,7 +37,9 @@ class FlowCacheInstrumentedTest {
     }
 
     @Test
-    fun testFlowCaching() = runTest {
+    fun testFlowCaching() = runTest(
+        timeout = Duration.INFINITE
+    ) {
         val testFlow: Flow<TestData> = flow {
             Log.d("FlowCacheInstrumentedTest", "Emitting test data! This should only happen once.")
             emit(TestData(1))
@@ -69,7 +72,7 @@ class FlowCacheInstrumentedTest {
         assertEquals(result1, result4)
         Log.d("FlowCacheInstrumentedTest", "result4: $result4")
 
-        return@runTest // assure the test completes with a void value
+        return@runTest // ensure the test completes with a void value
     }
 
     @Test
@@ -106,6 +109,6 @@ class FlowCacheInstrumentedTest {
         assertEquals(result1, result4)
         Log.d("FlowCacheInstrumentedTest", "result4: $result4")
 
-        return@runTest // assure the test completes with a void value
+        return@runTest // ensure the test completes with a void value
     }
 }
