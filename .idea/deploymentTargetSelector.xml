@@ -16,12 +16,9 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="SensorStatePreview">
+      <SelectionState runConfigName="testFlowCaching()">
         <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
-      <SelectionState runConfigName="ImmersiveFullscreenContentPreview">
-        <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2024-10-24T01:26:02.246281100Z">
+        <DropdownSelection timestamp="2024-11-22T21:18:05.343922900Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\parke\.android\avd\Pixel_Fold_API_35.avd" />
@@ -29,6 +26,9 @@
           </Target>
         </DropdownSelection>
         <DialogSelection />
+      </SelectionState>
+      <SelectionState runConfigName="testFlowCachingWithoutKeys()">
+        <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
   </component>
