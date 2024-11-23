@@ -2,7 +2,6 @@
 agp = "8.6.0-alpha07"
 commonsNet = "3.8.0"
 core = "3.5.2"
-ipaddressVersion = "5.5.1"
 kotlin = "2.0.20"
 coreKtx = "1.13.1"
 junit = "4.13.2"
@@ -16,7 +15,6 @@ composeBom = "2024.10.00"
 okhttp = "4.12.0"
 appcompat = "1.7.0"
 navigationCompose = "2.8.3"
-zxingAndroidEmbedded = "4.3.0"
 annotationJvm = "1.9.0"
 gradleNexusPublishPlugin = "2.0.0"
 
@@ -42,7 +40,7 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
-zxing-android-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 androidx-annotation-jvm = { group = "androidx.annotation", name = "annotation-jvm", version.ref = "annotationJvm" }
 
